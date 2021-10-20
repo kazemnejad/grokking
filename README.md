@@ -22,5 +22,5 @@ comet_ml.init()
 
 ### Train and Evaluation
 ```bash
-python src/main.py --configs "configs/power_sum.conf" train
+python src/main.py --configs "configs/power_et_al_sum.conf" train
 ```
