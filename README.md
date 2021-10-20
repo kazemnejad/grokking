@@ -8,7 +8,7 @@
 conda create -n grokking python=3.8
 conda activate grokking
 conda install pytorch torchvision torchaudio -c pytorch
-pip install src/requirement.txt
+pip install -r src/requirement.txt
 ```
 3. Configure Comet ML (Optional)
 ```bash
