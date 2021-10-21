@@ -10,8 +10,6 @@ import tempfile
 from pathlib import Path
 from shutil import which
 
-from comet_ml.artifacts import LoggedArtifactAsset
-
 VENV_PATH = "~/RUN_EXP_PY_ENV"
 SLURM_PYTHON_MODULE_NAME = "python/3"
 SLURM_SINGULARITY_MODULE_NAME = "singularity"
@@ -564,9 +562,8 @@ def download_trained_model_on_ava(args: argparse.Namespace):
     args.slurm_args = '-p ava_s.p ' + args.slurm_args
     download_trained_model(args)
 
-from comet_ml import ExistingExperiment, APIExperiment, API
-
 def download_bundle(exp_key: str, output_dir: Path):
+    from comet_ml import ExistingExperiment
     output_dir.mkdir(parents=True, exist_ok=True)
 
     exp = ExistingExperiment(previous_experiment=args.bundle,
@@ -581,11 +578,13 @@ def download_bundle(exp_key: str, output_dir: Path):
     artifact = exp.get_artifact(artifact_name)
     artifact.download(str(output_dir), overwrite_strategy=True)
 
-    data_asset: LoggedArtifactAsset = [asset for asset in artifact.remote_assets if asset.logical_path == "data"][0]
-    data_artifact = exp.get_artifact(data_asset.link)
-    data_dir = output_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    data_artifact.download(str(data_dir), overwrite_strategy=True)
+    if len(artifact.remote_assets) > 0:
+        from comet_ml.artifacts import LoggedArtifactAsset
+        data_asset: LoggedArtifactAsset = [asset for asset in artifact.remote_assets if asset.logical_path == "data"][0]
+        data_artifact = exp.get_artifact(data_asset.link)
+        data_dir = output_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        data_artifact.download(str(data_dir), overwrite_strategy=True)
 
     exp.end()
 
