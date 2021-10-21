@@ -152,7 +152,17 @@ class Experiment(FromParams):
                 save_dir=str(self.exp_root / "logs"),
                 project_name=self.project_name,
                 experiment_name=self.exp_name,
+                experiment_key=os.environ.get("COMET_EXPERIMENT_KEY", None),
                 offline=self.debug_mode,
+                log_code=False,
+                log_graph=True,
+                log_env_cpu=True,
+                log_env_gpu=True,
+                log_git_patch=False,
+                log_env_details=True,
+                log_git_metadata=False,
+                log_env_host=True,
+                parse_args=False,
             )
 
         return self._logger
