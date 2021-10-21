@@ -21,9 +21,10 @@ python3 scripts/run_experiment.py --platform mila --slurm-args '"--gres=gpu:1"' 
 def make_run_script(configs: str, commands: str, env_vars: str, exp_key: str) -> Path:
     script = "#!/bin/bash\n\n\n"
 
-    for ev in env_vars.split(","):
-        ev = ev.strip()
-        script += f"export {ev}\n"
+    if env_vars:
+        for ev in env_vars.split(","):
+            ev = ev.strip()
+            script += f"export {ev}\n"
 
     script += f"export COMET_EXPERIMENT_KEY={exp_key}\n"
 
@@ -212,7 +213,7 @@ def main(args: argparse.Namespace):
     exp.log_artifact(artifact)
     exp.end()
 
-    print(f"\n\nArtifact Name: {artifact_name}\n")
+    print(f"\n\nExp Key: {exp_key}")
     print(f"Exp URL: {exp.url}\n")
 
 
