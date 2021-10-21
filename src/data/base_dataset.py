@@ -130,12 +130,16 @@ class BaseDataLoaderFactory(Registrable):
         path: Optional[str] = None,
     ) -> DataLoader:
         dataset = self.get_dataset(stage=stage, path=path)
+
+        shuffle = self.dataloader._constructor_extras.get("shuffle", False)
+        shuffle &= stage == ExperimentStage.TRAINING
         dataloder = self.dataloader.construct(
             dataset=dataset,
             batch_size=self._get_batch_size(stage),
             collate_fn=self.get_collate_fn(stage),
             pin_memory=True,
             drop_last=False,
+            shuffle=shuffle
         )
 
         return dataloder
