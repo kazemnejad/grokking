@@ -1,4 +1,4 @@
-
+from pytorch_lightning.loggers.comet import CometExperiment
 from pytorch_lightning.utilities.cloud_io import get_filesystem
 
 import json
@@ -29,7 +29,9 @@ class DIModelCheckpoint(ModelCheckpoint, FromParams):
             or len(metrics) == 0
         )
 
-    def __init_ckpt_dir(self, dirpath: Optional[Union[str, Path]], filename: Optional[str]) -> None:
+    def __init_ckpt_dir(
+        self, dirpath: Optional[Union[str, Path]], filename: Optional[str]
+    ) -> None:
         self._fs = get_filesystem(str(dirpath) if dirpath else "")
 
         # if self.save_top_k != 0 and dirpath is not None and self._fs.isdir(dirpath) and len(self._fs.ls(dirpath)) > 0:
@@ -190,8 +192,7 @@ class Experiment(FromParams):
 
     def train(self, from_scratch: bool = False):
         model = self.lazy_model.construct()
-        ModelSummary(model)
-        self.logger.log_graph(model)
+        ModelSummary(model, mode="full", max_depth=2)
 
         train_dl = self.dl_factory.build(ExperimentStage.TRAINING)
         try:
@@ -202,10 +203,16 @@ class Experiment(FromParams):
         trainer = self.create_trainer(restore_last_ckpt=not from_scratch)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=valid_dl)
 
+        if hasattr(self.logger.experiment, "log_asset_folder"):
+            self.logger.experiment.log_asset_folder(
+                str(self.exp_root / "checkpoints"), recursive=True
+            )
+
     def validate(self, split="valid"):
         model = self.lazy_model.construct()
 
         import torch
+
         ckpt_path = self.get_last_checkpoint_path()
         if ckpt_path:
             ckpt = torch.load(str(ckpt_path))

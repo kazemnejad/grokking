@@ -18,6 +18,10 @@ class SumOp(Operation):
     def __call__(self, sym1: int, sym2: int, prime: int) -> int:
         return (sym1 + sym2) % prime
 
+@Operation.register("subtraction")
+class SubstractionOp(Operation):
+    def __call__(self, sym1: int, sym2: int, prime: int) -> int:
+        return (sym1 - sym2) % prime
 
 class DatasetFromList(Dataset):
     def __init__(self, data: List[Any]):
@@ -31,7 +35,7 @@ class DatasetFromList(Dataset):
         return len(self.data)
 
 
-@BaseDataLoaderFactory.register("symbols")
+# @BaseDataLoaderFactory.register("symbols")
 class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
     def __init__(
         self,
@@ -136,7 +140,7 @@ if __name__ == "__main__":
     dl_factory = SymbolsDataLoaderFactory.from_params(
         Params(
             {
-                "operation": {"type": "sum"},
+                "operation": {"type": "subtraction"},
                 "x_start": 0,
                 "x_end": prime,
                 "y_start": 0,
@@ -145,7 +149,7 @@ if __name__ == "__main__":
                 "random_split_seed": 384,
                 "train_valid_percent": 0.5,
                 "data_root": "data",
-                "name": "symbol-sum",
+                "name": "symbol-sub",
                 "split": "random",
             }
         )
@@ -154,7 +158,7 @@ if __name__ == "__main__":
     stage = ExperimentStage.TRAINING
     ds = dl_factory.get_dataset(stage)
     print(ds)
-    print(ds[0])
+    print(ds[:10])
 
     dataloader = dl_factory.build(stage)
     dataloader = iter(dataloader)
