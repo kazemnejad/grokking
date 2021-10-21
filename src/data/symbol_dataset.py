@@ -35,7 +35,7 @@ class DatasetFromList(Dataset):
         return len(self.data)
 
 
-# @BaseDataLoaderFactory.register("symbols")
+@BaseDataLoaderFactory.register("symbols")
 class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
     def __init__(
         self,
