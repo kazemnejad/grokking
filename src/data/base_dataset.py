@@ -92,6 +92,10 @@ class BaseDataLoaderFactory(Registrable):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def transform_model_output_to_line(self, outputs: Any) -> str:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def build_dataset(self, path: Path, stage: ExperimentStage) -> DatasetType:
         raise NotImplementedError()
 

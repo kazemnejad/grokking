@@ -123,6 +123,7 @@ class GrokkingModel(BaseModel):
         outputs: GrokkingModelOutput = self(
             sym_ids_1=batch["sym_ids_1"],
             sym_ids_2=batch["sym_ids_2"],
+            labels=batch.get("labels", None)
         )
 
         return outputs

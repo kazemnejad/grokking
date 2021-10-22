@@ -18,10 +18,18 @@ class SumOp(Operation):
     def __call__(self, sym1: int, sym2: int, prime: int) -> int:
         return (sym1 + sym2) % prime
 
+
 @Operation.register("subtraction")
 class SubstractionOp(Operation):
     def __call__(self, sym1: int, sym2: int, prime: int) -> int:
         return (sym1 - sym2) % prime
+
+
+@Operation.register("x^3+xy")
+class DivisionOp(Operation):
+    def __call__(self, sym1: int, sym2: int, prime: int) -> int:
+        return ((sym1 ** 3) + sym1 * sym2) % prime
+
 
 class DatasetFromList(Dataset):
     def __init__(self, data: List[Any]):
@@ -35,7 +43,7 @@ class DatasetFromList(Dataset):
         return len(self.data)
 
 
-@BaseDataLoaderFactory.register("symbols")
+@BaseDataLoaderFactory.register("symbols", exist_ok=True)
 class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
     def __init__(
         self,
@@ -50,6 +58,9 @@ class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
         **kwargs,
     ):
         super().__init__(**kwargs)
+
+        self.operator = operation
+        self.prime = prime
 
         self._generate_data(
             operation,
@@ -124,23 +135,34 @@ class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
         sym1 = int(parts[0])
         sym2 = int(parts[1])
         labels = None
-        if len(parts) == 3:
-            labels = int(parts[2])
+        if len(parts) == 3 and len(parts[2].strip()) > 0:
+            labels = int(parts[2].strip())
 
         instance = {"sym1": sym1, "sym2": sym2}
 
-        if labels is not None:
+        if labels is None:
+            instance["labels"] = self.operator(sym1, sym2, self.prime)
+        else:
             instance["labels"] = labels
 
         return instance
 
+    def transform_model_output_to_line(self, outputs: Any) -> str:
+        from models.grokking_model import GrokkingModelOutput
+        outputs: GrokkingModelOutput
+        assert  outputs.predictions is not None
+        pred_value = outputs.predictions[0].item()
+
+        return str(pred_value)
+
 
 if __name__ == "__main__":
     prime = 97
-    dl_factory = SymbolsDataLoaderFactory.from_params(
+    dl_factory = BaseDataLoaderFactory.from_params(
         Params(
             {
-                "operation": {"type": "subtraction"},
+                "type": "symbols",
+                "operation": {"type": "x^3+xy"},
                 "x_start": 0,
                 "x_end": prime,
                 "y_start": 0,
@@ -149,7 +171,7 @@ if __name__ == "__main__":
                 "random_split_seed": 384,
                 "train_valid_percent": 0.5,
                 "data_root": "data",
-                "name": "symbol-sub",
+                "name": "symbol",
                 "split": "random",
             }
         )
@@ -159,6 +181,8 @@ if __name__ == "__main__":
     ds = dl_factory.get_dataset(stage)
     print(ds)
     print(ds[:10])
+
+    print(dl_factory.transform_line_to_instance(input("enter sag:"), ExperimentStage.PREDICTION))
 
     dataloader = dl_factory.build(stage)
     dataloader = iter(dataloader)

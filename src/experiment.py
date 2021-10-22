@@ -191,6 +191,8 @@ class Experiment(FromParams):
         return self.lazy_dataset.construct()
 
     def train(self, from_scratch: bool = False):
+        self.logger.experiment.log_code(os.getcwd())
+
         model = self.lazy_model.construct()
         ModelSummary(model, mode="full", max_depth=2)
 
@@ -205,8 +207,10 @@ class Experiment(FromParams):
 
         if hasattr(self.logger.experiment, "log_asset_folder"):
             self.logger.experiment.log_asset_folder(
-                str(self.exp_root / "checkpoints"), recursive=True
+                str(self.exp_root / "checkpoints"), recursive=True, log_file_name=True
             )
+
+        trainer.predict()
 
     def validate(self, split="valid"):
         model = self.lazy_model.construct()
@@ -230,3 +234,50 @@ class Experiment(FromParams):
         dl = self.dl_factory.build(stage)
         trainer = self.create_trainer(restore_last_ckpt=True)
         trainer.test(model, dl)
+
+    def console_inference(self, ckpt_path: str = None):
+        model = self.lazy_model.construct()
+
+        import torch
+
+        if ckpt_path is None:
+            ckpt_path = self.get_last_checkpoint_path()
+        else:
+            ckpt_path = Path(ckpt_path)
+
+        if ckpt_path:
+            ckpt = torch.load(str(ckpt_path))
+            model.load_state_dict(ckpt["state_dict"])
+            logger.info(f"Checkpoint loaded from {str(ckpt_path)}.")
+        else:
+            logger.warning(
+                f"No checkpoint found. Initializing the model from scratch..."
+            )
+        ModelSummary(model)
+
+        logger.info("Enter :q to stop")
+
+        while True:
+            input_line = input("\n------\nInput:\n")
+            if input_line == ":q":
+                break
+
+            inputs = [
+                self.dl_factory.transform_line_to_instance(
+                    input_line, ExperimentStage.PREDICTION
+                )
+            ]
+            input_batch = self.dl_factory.get_collate_fn(ExperimentStage.PREDICTION)(
+                inputs
+            )
+
+            if torch.cuda.is_available():
+                input_batch = {k: v.cuda() for k, v in input_batch.items()}
+
+            outputs = model.predict_step(batch=input_batch, batch_idx=0)
+            output_line = self.dl_factory.transform_model_output_to_line(outputs)
+
+            print("\nModel Input:", json.dumps(inputs[0], indent=2))
+            print(f"Model Output:\n{output_line}")
+            if hasattr(outputs, "loss"):
+                print(f"Model loss: ", outputs.loss.item())
