@@ -73,12 +73,12 @@ PARTIAL_RUN_TENSORBOARD_DEV = """
 
 PARTIAL_COPY_TMP_TO_NODE_STORAGE = """
 echo "---> 4. Uploading contents to compute node..."
-rsync -az {tmp_dir}/* {node_storage}
+rsync -azP {tmp_dir}/* {node_storage}
 """
 
 PARTIAL_CNTR_INIT_SINGULARITY = """
 echo "---> 5. Copying container {image_path} to compute node..."
-rsync -avz {image_path} {node_storage}/
+rsync -avzP {image_path} {node_storage}/
 """
 
 PARTIAL_CNTR_EXEC_SINGULARITY = """

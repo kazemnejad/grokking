@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import Optional, List, Any, Callable, Dict
 
@@ -6,6 +7,10 @@ from torch.utils.data import Dataset, random_split
 
 from common import Registrable, ExperimentStage, Params
 from data.base_dataset import BaseDataLoaderFactory, DatasetType
+
+import logging
+
+logger = logging.getLogger("app")
 
 
 class Operation(Registrable):
@@ -30,6 +35,31 @@ class DivisionOp(Operation):
     def __call__(self, sym1: int, sym2: int, prime: int) -> int:
         return ((sym1 ** 3) + sym1 * sym2) % prime
 
+@Operation.register("moddiv")
+class ModularDivisionOp(Operation):
+    # Function to find modulo inverse of b. It returns
+    # -1 when inverse doesn't
+    # modInverse works for prime m
+    @staticmethod
+    def modInverse(b, m):
+        g = math.gcd(b, m)
+        if (g != 1):
+            # print("Inverse doesn't exist")
+            return -1
+        else:
+            # If b and m are relatively prime,
+            # then modulo inverse is b^(m-2) mode m
+            return pow(b, m - 2, m)
+
+    # Function to compute a/b under modulo m
+    @staticmethod
+    def modDivide(a, b, m):
+        a = a % m
+        inv = ModularDivisionOp.modInverse(b, m)
+        return (inv*a) % m
+
+    def __call__(self, sym1: int, sym2: int, prime: int) -> int:
+        return ModularDivisionOp.modDivide(sym1, sym2, prime)
 
 class DatasetFromList(Dataset):
     def __init__(self, data: List[Any]):
@@ -105,6 +135,10 @@ class SymbolsDataLoaderFactory(BaseDataLoaderFactory):
         self._train_data = list(train_data)
         self._valid_data = list(valid_data)
 
+        self.train_batch_size = min(len(self._train_data) // 2, self.train_batch_size)
+
+        logger.info(f"True batch size {self.train_batch_size}")
+
     def build_dataset(self, path: Path, stage: ExperimentStage) -> DatasetType:
         if stage == ExperimentStage.TRAINING:
             data = self._train_data
@@ -162,10 +196,10 @@ if __name__ == "__main__":
         Params(
             {
                 "type": "symbols",
-                "operation": {"type": "x^3+xy"},
+                "operation": {"type": "moddiv"},
                 "x_start": 0,
                 "x_end": prime,
-                "y_start": 0,
+                "y_start": 1,
                 "y_end": prime,
                 "prime": prime,
                 "random_split_seed": 384,

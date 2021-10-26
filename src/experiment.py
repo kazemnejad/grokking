@@ -169,7 +169,7 @@ class Experiment(FromParams):
 
         return self._logger
 
-    def create_trainer(self, restore_last_ckpt: bool) -> Trainer:
+    def create_trainer(self, restore_last_ckpt: bool, train_len: int = None) -> Trainer:
         if restore_last_ckpt:
             resume_ckpt = self.get_last_checkpoint_path()
             if resume_ckpt is None:
@@ -180,11 +180,21 @@ class Experiment(FromParams):
             resume_ckpt = None
 
         ckpt_callback = self.create_checkpoint_callback()
-        trainer = self.lazy_trainer.construct(
-            callbacks=[ckpt_callback],
-            logger=self.logger,
-            resume_from_checkpoint=resume_ckpt,
-        )
+        train_params = {
+            "callbacks": [ckpt_callback],
+            "logger": self.logger,
+            "resume_from_checkpoint": resume_ckpt,
+        }
+        if train_len is not None:
+            val_check_interval = min(
+                train_len,
+                self.lazy_trainer._constructor_extras.get(
+                    "val_check_interval", train_len
+                ),
+            )
+            train_params.update({"val_check_interval": val_check_interval})
+
+        trainer = self.lazy_trainer.construct(**train_params)
         return trainer
 
     def create_dl_factory(self):
@@ -202,7 +212,9 @@ class Experiment(FromParams):
         except:
             valid_dl = None
 
-        trainer = self.create_trainer(restore_last_ckpt=not from_scratch)
+        trainer = self.create_trainer(
+            restore_last_ckpt=not from_scratch, train_len=len(train_dl)
+        )
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=valid_dl)
 
         if hasattr(self.logger.experiment, "log_asset_folder"):
