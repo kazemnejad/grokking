@@ -440,7 +440,7 @@ class T5StackOutput(NamedTuple):
     cross_attentions: Optional[List[FloatT]] = None
 
 
-class T5Stack(TransformerModule, FromParams):
+class T5Stack(TransformerModule, Registrable):
     _pretrained_mapping = {"embed_tokens": "token_embeddings", "block": "blocks"}
 
     def __init__(

@@ -40,7 +40,7 @@ def make_run_script(configs: str, commands: str, env_vars: str, exp_key: str) ->
     script += (
         "export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages/:$PYTHONPATH\n"
     )
-    script += "\n\npip install --user -r src/requirements.txt\n"
+    script += "\n\n#pip install --user -r src/requirements.txt\n"
 
     configs_str = configs
     script += "\n\n"

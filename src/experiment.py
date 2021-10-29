@@ -1,3 +1,4 @@
+import torch.cuda
 from pytorch_lightning.loggers.comet import CometExperiment
 from pytorch_lightning.utilities.cloud_io import get_filesystem
 
@@ -180,21 +181,28 @@ class Experiment(FromParams):
             resume_ckpt = None
 
         ckpt_callback = self.create_checkpoint_callback()
-        train_params = {
+        trainer_params = {
             "callbacks": [ckpt_callback],
             "logger": self.logger,
             "resume_from_checkpoint": resume_ckpt,
         }
-        if train_len is not None:
-            val_check_interval = min(
-                train_len,
-                self.lazy_trainer._constructor_extras.get(
-                    "val_check_interval", train_len
-                ),
-            )
-            train_params.update({"val_check_interval": val_check_interval})
 
-        trainer = self.lazy_trainer.construct(**train_params)
+        if torch.cuda.is_available():
+            trainer_params.update({
+                "gpus": 1,
+                "auto_select_gpus": True,
+            })
+
+        # if train_len is not None:
+        #     val_check_interval = min(
+        #         train_len,
+        #         self.lazy_trainer._constructor_extras.get(
+        #             "val_check_interval", train_len
+        #         ),
+        #     )
+        #     trainer_params.update({"val_check_interval": val_check_interval})
+
+        trainer = self.lazy_trainer.construct(**trainer_params)
         return trainer
 
     def create_dl_factory(self):
@@ -204,7 +212,7 @@ class Experiment(FromParams):
         self.logger.experiment.log_code(os.getcwd())
 
         model = self.lazy_model.construct()
-        ModelSummary(model, mode="full", max_depth=2)
+        ModelSummary(model, max_depth=-1)
 
         train_dl = self.dl_factory.build(ExperimentStage.TRAINING)
         try:

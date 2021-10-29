@@ -1,5 +1,8 @@
 import logging
 import os
+from argparse import Namespace
+from collections import MutableMapping
+from typing import Dict, Any
 
 
 class NewLineFormatter(logging.Formatter):
@@ -87,3 +90,20 @@ def softmax(X, theta=1.0, axis=None):
         p = p.flatten()
 
     return p
+
+
+def _flatten_dict(params: Dict[Any, Any], delimiter: str = "/") -> Dict[str, Any]:
+    def _dict_generator(input_dict, prefixes=None):
+        prefixes = prefixes[:] if prefixes else []
+        if isinstance(input_dict, MutableMapping):
+            for key, value in input_dict.items():
+                key = str(key)
+                if isinstance(value, (MutableMapping, Namespace)):
+                    value = vars(value) if isinstance(value, Namespace) else value
+                    yield from _dict_generator(value, prefixes + [key])
+                else:
+                    yield prefixes + [key, value if value is not None else str(None)]
+        else:
+            yield prefixes + [input_dict if input_dict is None else str(input_dict)]
+
+    return {delimiter.join(keys): val for *keys, val in _dict_generator(params)}

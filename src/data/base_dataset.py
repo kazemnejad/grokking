@@ -25,6 +25,7 @@ class BaseDataLoaderFactory(Registrable):
         train_batch_size: int = 2,
         validation_batch_size: int = 2,
         test_batch_size: int = 2,
+        shuffle: bool = False,
         dataloader: Optional[Lazy[DIDataloader]] = None,
     ):
         data_root = Path(data_root) or Path()
@@ -49,6 +50,7 @@ class BaseDataLoaderFactory(Registrable):
         self.valid_batch_size = validation_batch_size
         self.test_batch_size = test_batch_size
 
+        self.shuffle = shuffle
         self.dataloader = dataloader or Lazy(DIDataloader)
 
         self._ds_cache: Dict[str, Any] = {}
@@ -135,8 +137,9 @@ class BaseDataLoaderFactory(Registrable):
     ) -> DataLoader:
         dataset = self.get_dataset(stage=stage, path=path)
 
-        shuffle = self.dataloader._constructor_extras.get("shuffle", False)
+        shuffle = self.shuffle
         shuffle &= stage == ExperimentStage.TRAINING
+
         dataloder = self.dataloader.construct(
             dataset=dataset,
             batch_size=self._get_batch_size(stage),

@@ -9,7 +9,7 @@ from common.tensor_types import FloatT, IntT
 from models.base_model import BaseModel
 from models.grokking_model import GrokkingModel, GrokkingModelOutput
 from modules.embedding import ScaledEmbedding
-from modules.transformer_stack import DecoderStack
+from modules.transformer_stack import TransformerStack
 
 
 @BaseModel.register("transformer")
@@ -17,7 +17,7 @@ class Transformer(GrokkingModel):
     def __init__(
             self,
             num_symbols: int,
-            stack: DecoderStack,
+            stack: TransformerStack,
             tie_embeddings: bool = True,
             add_extra_input_tokens: bool = True,
             **kwargs: Any
