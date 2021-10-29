@@ -219,7 +219,7 @@ if __name__ == "__main__":
     print(ds)
     print(ds[:10])
 
-    print(dl_factory.transform_line_to_instance(input("enter sag:"), ExperimentStage.PREDICTION))
+    print(dl_factory.transform_line_to_instance(input("Input:"), ExperimentStage.PREDICTION))
 
     dataloader = dl_factory.build(stage)
     dataloader = iter(dataloader)
