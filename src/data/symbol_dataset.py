@@ -31,12 +31,15 @@ class SubstractionOp(Operation):
 
 
 @Operation.register("x^3+xy")
-class DivisionOp(Operation):
+class PolynomialOp(Operation):
     def __call__(self, sym1: int, sym2: int, prime: int) -> int:
         return ((sym1 ** 3) + sym1 * sym2) % prime
 
 @Operation.register("moddiv")
 class ModularDivisionOp(Operation):
+    # Taken from here:
+    # https://www.geeksforgeeks.org/modular-division/
+
     # Function to find modulo inverse of b. It returns
     # -1 when inverse doesn't
     # modInverse works for prime m
