@@ -78,7 +78,7 @@ rsync -azP {tmp_dir}/* {node_storage}
 
 PARTIAL_CNTR_INIT_SINGULARITY = """
 echo "---> 5. Copying container {image_path} to compute node..."
-rsync -avzP {image_path} {node_storage}/
+cp -a {image_path} {node_storage}/
 """
 
 PARTIAL_CNTR_EXEC_SINGULARITY = """
