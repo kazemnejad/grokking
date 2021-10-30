@@ -125,6 +125,6 @@ optional arguments:
 ```
 Here is an example:
 ```bash
-python scripts/upload_experiment.py --configs "configs/fine_tune_debug.conf,configs/data/scan.conf" \
+python scripts/upload_experiment.py --configs "configs/power_et_al2.conf,configs/data/moddiv.conf" \
     --commands "train"
 ```
