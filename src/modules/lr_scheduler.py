@@ -70,3 +70,38 @@ class ConstantWithWarmupScheduler(LearningRateScheduler):
         super(ConstantWithWarmupScheduler, self).__init__(
             optimizer, lr_fn, last_epoch
         )
+
+
+@LearningRateScheduler.register("kazemink_with_warmup")
+class KazeminkLRScheduler(LearningRateScheduler):
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        warmup_steps: int,
+        saturation_step: int,
+        kazemink_coeff: int,
+        last_epoch: int = -1,
+    ):
+        """Initialize configuration of the learning rate schedule.
+        Args:
+          warmup_steps: An integer, the number of steps required for linear warmup.
+        """
+        self.saturation_step = saturation_step
+        self.warmup_steps = warmup_steps
+        self.kazemink_coeff = kazemink_coeff
+
+        def lr_fn(global_step):
+            lr_coeff = 1
+
+            # Apply linear warmup
+            if global_step < self.warmup_steps:
+                lr_coeff = global_step / self.warmup_steps
+
+            if global_step > self.saturation_step:
+                lr_coeff = self.kazemink_coeff
+
+            return lr_coeff
+
+        super(KazeminkLRScheduler, self).__init__(
+            optimizer, lr_fn, last_epoch
+        )
