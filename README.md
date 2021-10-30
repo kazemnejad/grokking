@@ -21,10 +21,6 @@ Run the following:
 import comet_ml
 comet_ml.init()
 ```
-### Download some dataset
-```bash
-python scripts/download_ds.py scan-simple_debug
-```
 ### Run the model
 Train and eval
 ```bash
