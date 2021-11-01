@@ -16,6 +16,8 @@ class GrokkingModelOutput:
     logits: Optional[FloatT] = None
     loss: Optional[FloatT] = None
     predictions: Optional[IntT] = None
+    mle_loss: Optional[FloatT] = None
+    l2_loss: Optional[FloatT] = None
 
 
 class GrokkingModel(BaseModel):
@@ -66,6 +68,12 @@ class GrokkingModel(BaseModel):
         loss = outputs.loss
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
+        if outputs.mle_loss is not None:
+            self.log("train_mle_loss", outputs.mle_loss, on_step=True, on_epoch=True, prog_bar=True)
+
+        if outputs.l2_loss is not None:
+            self.log("train_l2_loss", outputs.l2_loss, on_step=True, on_epoch=True, prog_bar=True)
+
         preds = outputs.predictions
         self.train_metrics(preds, batch["labels"])
         self.log_dict(
@@ -90,6 +98,9 @@ class GrokkingModel(BaseModel):
         preds = outputs.predictions
 
         self.log("valid_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+
+        if outputs.mle_loss is not None:
+            self.log("valid_mle_loss", outputs.mle_loss, on_step=False, on_epoch=True, prog_bar=True)
 
         self.valid_metrics(preds, batch["labels"])
         self.log_dict(self.valid_metrics, on_step=False, on_epoch=True, prog_bar=True)

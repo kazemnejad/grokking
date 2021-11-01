@@ -15,12 +15,13 @@ from modules.transformer_stack import TransformerStack
 @BaseModel.register("transformer")
 class Transformer(GrokkingModel):
     def __init__(
-            self,
-            num_symbols: int,
-            stack: TransformerStack,
-            tie_embeddings: bool = True,
-            add_extra_input_tokens: bool = True,
-            **kwargs: Any
+        self,
+        num_symbols: int,
+        stack: TransformerStack,
+        tie_embeddings: bool = True,
+        add_extra_input_tokens: bool = True,
+        l2_regularization: float = 0.0,
+        **kwargs: Any
     ):
         super().__init__(**kwargs)
 
@@ -43,6 +44,7 @@ class Transformer(GrokkingModel):
         self.embed = ScaledEmbedding(num_embeddings, self.encoder.hidden_size)
 
         self.add_extra_input_tokens = add_extra_input_tokens
+        self.l2_regularization = l2_regularization
 
         self.classifier = nn.Linear(
             self.hidden_size,
@@ -53,7 +55,7 @@ class Transformer(GrokkingModel):
             self.classifier.weight = self.embed.weight
 
     def forward(
-            self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
+        self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
     ) -> GrokkingModelOutput:
         if self.add_extra_input_tokens:
             input_ids = torch.stack(
@@ -82,9 +84,32 @@ class Transformer(GrokkingModel):
         predictions = torch.argmax(logits, dim=1).long()
 
         loss: Optional[FloatT] = None
-        if labels is not None:
-            loss = self.compute_loss(logits, labels)
+        mle_loss: Optional[FloatT] = None
+        l2_loss = self.compute_l2_term()
 
-        output = GrokkingModelOutput(logits=logits, loss=loss, predictions=predictions)
+        if labels is not None:
+            mle_loss = self.compute_loss(logits, labels)
+            loss = mle_loss +l2_loss
+
+        output = GrokkingModelOutput(
+            logits=logits,
+            loss=loss,
+            mle_loss=mle_loss,
+            l2_loss=l2_loss,
+            predictions=predictions,
+        )
 
         return output
+
+    def compute_l2_term(self) -> FloatT:
+        if self.l2_regularization == 0:
+            return 0.0
+
+        l2_loss = 0.0
+        for param in self.parameters():
+            l2_loss += (param ** 2).sum()
+
+
+        l2_loss *= self.l2_regularization
+
+        return l2_loss
