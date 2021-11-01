@@ -18,6 +18,7 @@ class GrokkingModelOutput:
     predictions: Optional[IntT] = None
     mle_loss: Optional[FloatT] = None
     l2_loss: Optional[FloatT] = None
+    sd_loss: Optional[FloatT] = None
 
 
 class GrokkingModel(BaseModel):
@@ -52,12 +53,12 @@ class GrokkingModel(BaseModel):
         return self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
 
     def forward(
-        self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
+            self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
     ) -> GrokkingModelOutput:
         raise NotImplemented
 
     def training_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx, *args, **kwargs
+            self, batch: Dict[str, torch.Tensor], batch_idx, *args, **kwargs
     ) -> STEP_OUTPUT:
         outputs: GrokkingModelOutput = self(
             sym_ids_1=batch["sym_ids_1"],
@@ -69,10 +70,31 @@ class GrokkingModel(BaseModel):
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
         if outputs.mle_loss is not None:
-            self.log("train_mle_loss", outputs.mle_loss, on_step=True, on_epoch=True, prog_bar=True)
+            self.log(
+                "train_mle_loss",
+                outputs.mle_loss,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=True,
+            )
 
         if outputs.l2_loss is not None:
-            self.log("train_l2_loss", outputs.l2_loss, on_step=True, on_epoch=True, prog_bar=True)
+            self.log(
+                "train_l2_loss",
+                outputs.l2_loss,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=True,
+            )
+
+        if outputs.sd_loss is not None:
+            self.log(
+                "train_sd_loss",
+                outputs.sd_loss,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=True,
+            )
 
         preds = outputs.predictions
         self.train_metrics(preds, batch["labels"])
@@ -100,7 +122,13 @@ class GrokkingModel(BaseModel):
         self.log("valid_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         if outputs.mle_loss is not None:
-            self.log("valid_mle_loss", outputs.mle_loss, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(
+                "valid_mle_loss",
+                outputs.mle_loss,
+                on_step=False,
+                on_epoch=True,
+                prog_bar=True,
+            )
 
         self.valid_metrics(preds, batch["labels"])
         self.log_dict(self.valid_metrics, on_step=False, on_epoch=True, prog_bar=True)
@@ -134,8 +162,7 @@ class GrokkingModel(BaseModel):
         outputs: GrokkingModelOutput = self(
             sym_ids_1=batch["sym_ids_1"],
             sym_ids_2=batch["sym_ids_2"],
-            labels=batch.get("labels", None)
+            labels=batch.get("labels", None),
         )
 
         return outputs
-

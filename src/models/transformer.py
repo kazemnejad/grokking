@@ -20,7 +20,9 @@ class Transformer(GrokkingModel):
         stack: TransformerStack,
         tie_embeddings: bool = True,
         add_extra_input_tokens: bool = True,
+        spectral_decoupling_coeff: float = 0.0,
         l2_regularization: float = 0.0,
+        mle_cut_off_steps: int = -1,
         **kwargs: Any
     ):
         super().__init__(**kwargs)
@@ -45,6 +47,8 @@ class Transformer(GrokkingModel):
 
         self.add_extra_input_tokens = add_extra_input_tokens
         self.l2_regularization = l2_regularization
+        self.spectral_decoupling_coeff = spectral_decoupling_coeff
+        self.mle_cut_off_steps = mle_cut_off_steps
 
         self.classifier = nn.Linear(
             self.hidden_size,
@@ -86,16 +90,22 @@ class Transformer(GrokkingModel):
         loss: Optional[FloatT] = None
         mle_loss: Optional[FloatT] = None
         l2_loss = self.compute_l2_term()
+        sd_loss = self.compute_spectral_decoupling_term(logits, labels)
 
         if labels is not None:
-            mle_loss = self.compute_loss(logits, labels)
-            loss = mle_loss +l2_loss
+            if self.mle_cut_off_steps != -1 and self.global_step > self.mle_cut_off_steps:
+                mle_loss = 0
+            else:
+                mle_loss = self.compute_loss(logits, labels)
+
+            loss = sum([mle_loss, l2_loss, sd_loss])
 
         output = GrokkingModelOutput(
             logits=logits,
             loss=loss,
             mle_loss=mle_loss,
             l2_loss=l2_loss,
+            sd_loss=sd_loss,
             predictions=predictions,
         )
 
@@ -109,7 +119,16 @@ class Transformer(GrokkingModel):
         for param in self.parameters():
             l2_loss += (param ** 2).sum()
 
-
         l2_loss *= self.l2_regularization
 
         return l2_loss
+
+    def compute_spectral_decoupling_term(self, logits: FloatT, labels: IntT) -> FloatT:
+        if self.spectral_decoupling_coeff == 0:
+            return 0.
+
+        norms = torch.norm(logits, p=2, dim=1)
+        sd_term = torch.mean(norms)
+        sd_term *= self.spectral_decoupling_coeff
+
+        return sd_term
