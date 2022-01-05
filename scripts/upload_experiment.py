@@ -194,6 +194,7 @@ def main(args: argparse.Namespace):
         log_git_metadata=False,
         log_env_host=False,
         parse_args=False,
+        workspace=args.workspace
     )
     exp.set_name(exp_name)
     exp_key = exp.get_key()
@@ -255,6 +256,15 @@ if __name__ == "__main__":
         metavar="KEY=VAL[,KEY=VAL]",
         type=str,
         help="Experiment environment variables",
+    )
+
+    parser.add_argument(
+        "-w",
+        "--workspace",
+        metavar="KEY=VAL[,KEY=VAL]",
+        type=str,
+        default="kazemnejad",
+        help="CometML workspace",
     )
 
     args = parser.parse_args()

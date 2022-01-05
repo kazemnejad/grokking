@@ -20,9 +20,6 @@ class Transformer(GrokkingModel):
         stack: TransformerStack,
         tie_embeddings: bool = True,
         add_extra_input_tokens: bool = True,
-        spectral_decoupling_coeff: float = 0.0,
-        l2_regularization: float = 0.0,
-        mle_cut_off_steps: int = -1,
         **kwargs: Any
     ):
         super().__init__(**kwargs)
@@ -46,9 +43,6 @@ class Transformer(GrokkingModel):
         self.embed = ScaledEmbedding(num_embeddings, self.encoder.hidden_size)
 
         self.add_extra_input_tokens = add_extra_input_tokens
-        self.l2_regularization = l2_regularization
-        self.spectral_decoupling_coeff = spectral_decoupling_coeff
-        self.mle_cut_off_steps = mle_cut_off_steps
 
         self.classifier = nn.Linear(
             self.hidden_size,
@@ -58,7 +52,7 @@ class Transformer(GrokkingModel):
         if tie_embeddings:
             self.classifier.weight = self.embed.weight
 
-    def forward(
+    def compute_logits(
         self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
     ) -> GrokkingModelOutput:
         if self.add_extra_input_tokens:
@@ -85,50 +79,4 @@ class Transformer(GrokkingModel):
         hidden = enc_output.last_hidden_state
         logits = self.classifier(hidden[:, -1, :])
 
-        predictions = torch.argmax(logits, dim=1).long()
-
-        loss: Optional[FloatT] = None
-        mle_loss: Optional[FloatT] = None
-        l2_loss = self.compute_l2_term()
-        sd_loss = self.compute_spectral_decoupling_term(logits, labels)
-
-        if labels is not None:
-            if self.mle_cut_off_steps != -1 and self.global_step > self.mle_cut_off_steps:
-                mle_loss = 0
-            else:
-                mle_loss = self.compute_loss(logits, labels)
-
-            loss = sum([mle_loss, l2_loss, sd_loss])
-
-        output = GrokkingModelOutput(
-            logits=logits,
-            loss=loss,
-            mle_loss=mle_loss,
-            l2_loss=l2_loss,
-            sd_loss=sd_loss,
-            predictions=predictions,
-        )
-
-        return output
-
-    def compute_l2_term(self) -> FloatT:
-        if self.l2_regularization == 0:
-            return 0.0
-
-        l2_loss = 0.0
-        for param in self.parameters():
-            l2_loss += (param ** 2).sum()
-
-        l2_loss *= self.l2_regularization
-
-        return l2_loss
-
-    def compute_spectral_decoupling_term(self, logits: FloatT, labels: IntT) -> FloatT:
-        if self.spectral_decoupling_coeff == 0:
-            return 0.
-
-        norms = torch.norm(logits, p=2, dim=1)
-        sd_term = torch.mean(norms)
-        sd_term *= self.spectral_decoupling_coeff
-
-        return sd_term
+        return logits

@@ -188,10 +188,12 @@ class Experiment(FromParams):
         }
 
         if torch.cuda.is_available():
-            trainer_params.update({
-                "gpus": 1,
-                "auto_select_gpus": True,
-            })
+            trainer_params.update(
+                {
+                    "gpus": 1,
+                    "auto_select_gpus": True,
+                }
+            )
 
         # if train_len is not None:
         #     val_check_interval = min(
@@ -209,9 +211,10 @@ class Experiment(FromParams):
         return self.lazy_dataset.construct()
 
     def train(self, from_scratch: bool = False):
-        self.logger.experiment.log_code(os.getcwd())
-
-        model = self.lazy_model.construct()
+        model = self.lazy_model.construct(
+            train_ds=self.dl_factory.get_dataset(ExperimentStage.TRAINING),
+            collate_fn=self.dl_factory.get_collate_fn(ExperimentStage.TRAINING),
+        )
         ModelSummary(model, max_depth=-1)
 
         train_dl = self.dl_factory.build(ExperimentStage.TRAINING)
@@ -230,7 +233,6 @@ class Experiment(FromParams):
                 str(self.exp_root / "checkpoints"), recursive=True, log_file_name=True
             )
 
-        trainer.predict()
 
     def validate(self, split="valid"):
         model = self.lazy_model.construct()

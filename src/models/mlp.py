@@ -7,7 +7,7 @@ from torch import nn
 from common import Lazy
 from common.tensor_types import IntT, FloatT
 from models.base_model import BaseModel
-from models.grokking_model import GrokkingModel, GrokkingModelOutput
+from models.grokking_model import GrokkingModel
 
 
 @BaseModel.register("mlp")
@@ -25,9 +25,9 @@ class MLP(GrokkingModel):
         self.encoder = hidden_layers.construct(input_dim=2 * embedding_dim)
         self.classifier = nn.Linear(self.encoder.get_output_dim(), num_symbols)
 
-    def forward(
+    def compute_logits(
             self, sym_ids_1: IntT, sym_ids_2: IntT, labels: Optional[IntT] = None, **kwargs
-    ) -> GrokkingModelOutput:
+    ) -> FloatT:
         sym_embed_1 = self.embed(sym_ids_1)
         sym_embed_2 = self.embed(sym_ids_2)
 
@@ -35,12 +35,4 @@ class MLP(GrokkingModel):
         hidden = self.encoder(inputs)
         logits = self.classifier(hidden)
 
-        predictions = torch.argmax(logits, dim=1).long()
-
-        loss: Optional[FloatT] = None
-        if labels is not None:
-            loss = self.compute_loss(logits, labels)
-
-        output = GrokkingModelOutput(logits=logits, loss=loss, predictions=predictions)
-
-        return output
+        return logits
